@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Income Expense Calculator</title>
+    <style>
+        /* Simple styles for layout and design */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .container {
+            width: 90%;
+            max-width: 600px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+        }
+        .summary {
+            margin-bottom: 20px;
+        }
+        .summary div {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .filters {
+            margin-bottom: 20px;
+        }
+        .entry {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+        .entry.income {
+            border-left: 5px solid green;
+        }
+        .entry.expense {
+            border-left: 5px solid red;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Income Expense Calculator</h1>
+
+        <!-- Display financial summary -->
+        <div class="summary">
+            <div><strong>Total Income:</strong> <span id="total-income">0</span></div>
+            <div><strong>Total Expense:</strong> <span id="total-expense">0</span></div>
+            <div><strong>Net Balance:</strong> <span id="net-balance">0</span></div>
+        </div>
+
+        <!-- Form to add new entries -->
+        <div class="form-group">
+            <label for="description">Description</label>
+            <input type="text" id="description" placeholder="Enter description">
+
+            <label for="amount">Amount</label>
+            <input type="number" id="amount" placeholder="Enter amount">
+
+            <button id="add-entry">Add Entry</button>
+            <button id="reset">Reset</button>
+        </div>
+
+        <!-- Filters for displaying entries -->
+        <div class="filters">
+            <label><input type="radio" name="filter" value="all" checked> All</label>
+            <label><input type="radio" name="filter" value="income"> Income</label>
+            <label><input type="radio" name="filter" value="expense"> Expense</label>
+        </div>
+
+        <!-- Section to show all entries -->
+        <div id="entries"></div>
+    </div>
+
+    <script>
+        // References to HTML elements
+        const descriptionEl = document.getElementById('description');
+        const amountEl = document.getElementById('amount');
+        const addEntryBtn = document.getElementById('add-entry');
+        const resetBtn = document.getElementById('reset');
+        const entriesContainer = document.getElementById('entries');
+        const totalIncomeEl = document.getElementById('total-income');
+        const totalExpenseEl = document.getElementById('total-expense');
+        const netBalanceEl = document.getElementById('net-balance');
+        const filters = document.querySelectorAll('input[name="filter"]');
+
+        // Store entries in local storage
+        let entries = JSON.parse(localStorage.getItem('entries')) || [];
+
+        // Update financial summary
+        function updateSummary() {
+            const income = entries.filter(e => e.type === 'income').reduce((sum, entry) => sum + entry.amount, 0);
+            const expense = entries.filter(e => e.type === 'expense').reduce((sum, entry) => sum + entry.amount, 0);
+            totalIncomeEl.textContent = income;
+            totalExpenseEl.textContent = expense;
+            netBalanceEl.textContent = income - expense;
+        }
+
+        // Show entries based on the selected filter
+        function displayEntries(filter = 'all') {
+            entriesContainer.innerHTML = '';
+            const filteredEntries = filter === 'all' ? entries : entries.filter(entry => entry.type === filter);
+            filteredEntries.forEach((entry, index) => {
+                const entryDiv = document.createElement('div');
+                entryDiv.className = `entry ${entry.type}`;
+                entryDiv.innerHTML = `
+                    <span>${entry.description} - $${entry.amount}</span>
+                    <div>
+                        <button onclick="editEntry(${index})">Edit</button>
+                        <button onclick="deleteEntry(${index})">Delete</button>
+                    </div>
+                `;
+                entriesContainer.appendChild(entryDiv);
+            });
+        }
+
+        // Add a new entry
+        function addEntry() {
+            const description = descriptionEl.value.trim();
+            const amount = parseFloat(amountEl.value);
+            if (!description || isNaN(amount)) {
+                alert('Please enter valid details!');
+                return;
+            }
+            const type = amount >= 0 ? 'income' : 'expense';
+            entries.push({ description, amount: Math.abs(amount), type });
+            localStorage.setItem('entries', JSON.stringify(entries));
+            displayEntries();
+            updateSummary();
+            resetFields();
+        }
+
+        // Delete an entry
+        function deleteEntry(index) {
+            entries.splice(index, 1);
+            localStorage.setItem('entries', JSON.stringify(entries));
+            displayEntries();
+            updateSummary();
+        }
+
+        // Edit an entry
+        function editEntry(index) {
+            const entry = entries[index];
+            descriptionEl.value = entry.description;
+            amountEl.value = entry.type === 'expense' ? -entry.amount : entry.amount;
+            deleteEntry(index);
+        }
+
+        // Clear input fields
+        function resetFields() {
+            descriptionEl.value = '';
+            amountEl.value = '';
+        }
+
+        // Event listeners
+        addEntryBtn.addEventListener('click', addEntry);
+        resetBtn.addEventListener('click', resetFields);
+        filters.forEach(filter => {
+            filter.addEventListener('change', (e) => {
+                displayEntries(e.target.value);
+            });
+        });
+
+        // Initialize on load
+        displayEntries();
+        updateSummary();
+    </script>
+</body>
+</html>
